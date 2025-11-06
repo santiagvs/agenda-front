@@ -1,0 +1,42 @@
+.app-header {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: #ffffff;
+    color: #222;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.app-header .brand {
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.app-header .right {
+    display: flex;
+    gap: .5rem;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-header .logout-btn {
+    padding: .45rem .75rem;
+    background: #FFF;
+    color: #b80000;
+    border: none;
+    border-radius: px;
+    cursor: pointer;
+}
+
+.logout-btn {
+    transition: 300ms ease-in-out;
+}
+
+.app-header .logout-btn:hover {
+    background: #ffd1d1;
+}

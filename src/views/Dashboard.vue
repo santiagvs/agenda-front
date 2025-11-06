@@ -1,13 +1,17 @@
 <script setup lang="ts">
-import ContactForm from '@components/ContactForm.vue';
-import Modal from '@components/Modal.vue';
-import type { Contact } from '@interfaces/contact';
-import { useContactsStore } from '@stores/contact';
+import ContactForm from "@components/ContactForm.vue";
+import Modal from "@components/Modal.vue";
+import type { Contact } from "@interfaces/contact";
+import { useContactsStore } from "@stores/contact";
 import { useDebounceFn } from "@vueuse/core"
-import { computed, onMounted, ref } from 'vue';
-import { PhX, PhPencil, PhTrash, PhUserCirclePlus } from "@phosphor-icons/vue";
+import { computed, onMounted, ref } from "vue";
+import { PhX, PhPencil, PhTrash, PhUserCirclePlus, PhSignOut } from "@phosphor-icons/vue";
+import { useAuthStore } from "@stores/auth";
+import { useRouter } from "vue-router";
 
 const contacts = useContactsStore();
+const auth = useAuthStore();
+const router = useRouter();
 
 const search = ref("");
 const debouncedSet = useDebounceFn((v: string) => (search.value = v), 250);
@@ -15,8 +19,8 @@ const debouncedSet = useDebounceFn((v: string) => (search.value = v), 250);
 const showCreate = ref(false);
 const showEdit = ref(false);
 const showDelete = ref(false);
-const editingId = ref<string | null>(null);
-const deletingId = ref<string | null>(null);
+const editingId = ref<number | null>(null);
+const deletingId = ref<number | null>(null);
 const actionLoading = ref(false);
 const actionError = ref<string | null>(null);
 
@@ -41,13 +45,13 @@ function openCreate() {
     showCreate.value = true;
 }
 
-function openEdit(id: string) {
+function openEdit(id: number) {
     actionError.value = null;
     editingId.value = id;
     showEdit.value = true;
 }
 
-function openDelete(id: string) {
+function openDelete(id: number) {
     actionError.value = null;
     deletingId.value = id;
     showDelete.value = true;
@@ -91,6 +95,7 @@ async function handleDelete() {
 
     try {
         await contacts.remove(deletingId.value);
+        showDelete.value = false;
         onRetry();
     } catch (e: any) {
         actionError.value = e.message || "Erro ao excluir contato";
@@ -99,68 +104,76 @@ async function handleDelete() {
     }
 }
 
+function handleLogout() {
+    auth.logout();
+    router.push("/login");
+}
+
 const editingContact = computed(() =>
-  editingId.value ? contacts.list.find(c => c.id === editingId.value) : undefined
+    editingId.value ? contacts.list.find(c => c.id === editingId.value) : undefined
 );
 
 </script>
 
 <template>
-    <div class="contacts">
-        <div class="toolbar">
-            <input class="search" type="search" placeholder="Buscar por nome, e-mail ou telefone"
-                @input="debouncedSet(($event.target as HTMLInputElement).value)" />
-            <button @click="onRetry" :disabled="contacts.loading">Recarregar</button>
-            <button @click="openCreate" style="background-color: #00705A; padding-block: 0.475rem;">
-                <PhUserCirclePlus :size="20" />
-            </button>
-        </div>
-
-        <div v-if="contacts.loading" class="skeleton">
-            Carregando contatos...
-        </div>
-
-        <div v-else-if="contacts.error" class="error">
-            {{ contacts.error }}
-        </div>
-
-        <div v-else-if="!filtered.length" class="empty">
-            Nenhum contato encontrado.
-        </div>
-
-        <ul v-else class="list">
-            <li v-for="c in filtered" :key="c.id" class="item">
-            <div class="item-main">
-            <img v-if="c.photo_url" :src="c.photo_url" class="avatar-img" />
-                <div v-else class="avatar">
-                    {{ c.name[0] }}
-                </div>
-                <div class="meta">
-                    <strong>{{ c.name }}</strong>
-                    <small>{{ c.email || "—" }}</small>
-                    <small>{{ c.phone }}</small>
-                </div>
-            </div>
-            <div class="item-actions">
-                <button
-                    class="icon-btn"
-                    type="button"
-                    @click.stop="openEdit(c.id)"
-                    aria-label="Editar contato"
-                >
-                    <PhPencil :size="20" weight="duotone" />
-                </button>
-                <button
-                    class="icon-btn danger"
-                    type="button"
-                    @click.stop="openDelete(c.id)"
-                    aria-label="Excluir contato"
-                >
-                <PhTrash :size="20" weight="duotone" />
+    <div class="dashboard">
+        <header class="app-header">
+            <div class="brand">Agenda</div>
+            <div class="right">
+                <span>Olá, <b>{{ auth.user?.name }}</b></span>
+                <button class="logout-btn" type="button" @click="handleLogout" title="Sair">
+                    <PhSignOut :size="20" />
                 </button>
             </div>
-            </li>
-        </ul>
+        </header>
+
+        <main class="contacts">
+            <div class="toolbar">
+                <input class="search" type="search" placeholder="Buscar por nome, e-mail ou telefone"
+                    @input="debouncedSet(($event.target as HTMLInputElement).value)" />
+                <button @click="onRetry" :disabled="contacts.loading">Recarregar</button>
+                <button @click="openCreate" style="background-color: #00705A; padding-block: 0.475rem;">
+                    <PhUserCirclePlus :size="20" />
+                </button>
+            </div>
+
+            <div v-if="contacts.loading" class="skeleton">
+                Carregando contatos...
+            </div>
+
+            <div v-else-if="contacts.error" class="error">
+                {{ contacts.error }}
+            </div>
+
+            <div v-else-if="!filtered.length" class="empty">
+                Nenhum contato encontrado.
+            </div>
+
+            <ul v-else class="list">
+                <li v-for="c in filtered" :key="c.id" class="item">
+                    <div class="item-main">
+                        <img v-if="c.photo_url" :src="c.photo_url" class="avatar-img" />
+                        <div v-else class="avatar">
+                            {{ c.name[0] }}
+                        </div>
+                        <div class="meta">
+                            <strong>{{ c.name }}</strong>
+                            <small>{{ c.email || "—" }}</small>
+                            <small>{{ c.phone }}</small>
+                        </div>
+                    </div>
+                    <div class="item-actions">
+                        <button class="icon-btn" type="button" @click.stop="openEdit(c.id)" aria-label="Editar contato">
+                            <PhPencil :size="20" weight="duotone" />
+                        </button>
+                        <button class="icon-btn danger" type="button" @click.stop="openDelete(c.id)"
+                            aria-label="Excluir contato">
+                            <PhTrash :size="20" weight="duotone" />
+                        </button>
+                    </div>
+                </li>
+            </ul>
+        </main>
     </div>
 
     <Modal :open="showCreate" @close="showCreate = false">
@@ -187,12 +200,7 @@ const editingContact = computed(() =>
                 </button>
             </div>
         </template>
-        <ContactForm
-            :initial="editingContact"
-            :loading="actionLoading"
-            submit-label="Salvar"
-            @submit="handleUpdate"
-        />
+        <ContactForm :initial="editingContact" :loading="actionLoading" submit-label="Salvar" @submit="handleUpdate" />
         <div v-if="actionError" class="inline-error">{{ actionError }}</div>
     </Modal>
 
@@ -207,17 +215,10 @@ const editingContact = computed(() =>
             </div>
         </template>
         <div class="delete-buttons">
-            <button
-                @click.stop="handleDelete"
-                :disabled="actionLoading"
-                style="background-color: red;"
-            >
+            <button @click.stop="handleDelete" :disabled="actionLoading" style="background-color: red;">
                 Sim, excluir
             </button>
-            <button
-                @click="showDelete = false"
-                :disabled="actionLoading"
-            >
+            <button @click="showDelete = false" :disabled="actionLoading">
                 Cancelar
             </button>
         </div>
@@ -225,14 +226,27 @@ const editingContact = computed(() =>
     </Modal>
 </template>
 
+<style src="@styles/header.css" scoped></style>
+
 <style scoped>
+.dashboard {
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
 .contacts {
     width: 100%;
     max-width: 760px;
     margin: 0 auto;
-    display: grid;
-    gap: 1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: 100%;
+    gap: 0.75rem;
     text-align: start;
+    flex: 1;
 }
 
 .toolbar {
@@ -258,11 +272,11 @@ const editingContact = computed(() =>
 .search {
     flex: 1;
     padding: 0.75rem;
-    border-radius: 4px;
+    border-radius: 8px;
     outline: none;
     border: none;
     color: #636363;
-    background-color: #e4e4e4;
+    background-color: #f3f3f3;
     min-width: 200px;
 }
 

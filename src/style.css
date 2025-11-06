@@ -28,9 +28,6 @@ html, body, #app {
 
 body {
   margin: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   min-width: 320px;
   min-height: 100dvh;
 }
@@ -67,15 +64,7 @@ button:focus-visible {
 
 #app {
   width: 100%;
-  max-width: 1280px;
-  margin: 0;
-  padding: 2rem;
-  min-height: 100dvh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  box-sizing: border-box;
+  margin: 0 auto;
 }
 
 .form-group {

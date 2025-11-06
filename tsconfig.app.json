@@ -20,6 +20,7 @@
       "@stores/*": ["./stores/*"],
       "@interfaces/*": ["./interfaces/*"],
       "@utils/*": ["./utils/*"],
+      "@styles/*": ["./styles/*"],
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"]

@@ -22,7 +22,7 @@ export default class ContactService {
         return unwrap<Contact>(data);
     }
 
-    async update(id: string, { name, email, phone, photo }: Partial<Omit<Contact, "id">>) {
+    async update(id: number, { name, email, phone, photo }: Partial<Omit<Contact, "id">>) {
         const fd = new FormData();
         if (name) fd.append("name", name);
         if (phone) fd.append("phone", phone);
@@ -34,7 +34,7 @@ export default class ContactService {
         return unwrap<Contact>(data);
     }
 
-    async remove(id: string) {
+    async remove(id: number) {
         const response =
             await api.delete<Omit<ApiResponse<Contact>, "data">>(`/contacts/${id}`);
 

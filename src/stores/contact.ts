@@ -8,14 +8,14 @@ const service = new ContactService();
 
 function isValidContact(obj: any): obj is Contact {
     return Boolean(obj) 
-        && typeof obj.id === "string" 
+        && typeof obj.id === "number" 
         && typeof obj.name === "string"
         && typeof obj.phone === "string";
 }
 
 export const useContactsStore = defineStore("contacts", () => {
-    const byId = ref<Record<string, Contact>>({});
-    const ids = ref<string[]>([]);
+    const byId = ref<Record<number, Contact>>({});
+    const ids = ref<number[]>([]);
     const loading = ref(false);
     const error = ref<string | null>(null);
     const lastFetched = ref<number>(0);
@@ -75,7 +75,7 @@ export const useContactsStore = defineStore("contacts", () => {
         return contactCreated;
     }
 
-    async function update(id: string, payload: Partial<Omit<Contact, "id">>) {
+    async function update(id: number, payload: Partial<Omit<Contact, "id">>) {
         setError(null);
         const contactUpdated = await service.update(id, payload);
         if (!isValidContact(contactUpdated))
@@ -86,7 +86,7 @@ export const useContactsStore = defineStore("contacts", () => {
         return contactUpdated;
     }
 
-    async function remove(id: string) {
+    async function remove(id: number) {
         setError(null);
         try {
             await service.remove(id);
