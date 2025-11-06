@@ -2,12 +2,21 @@ import type { Contact } from "@interfaces/contact";
 import api from "./api";
 import type { ApiResponse } from "@interfaces/api-response";
 import unwrap from "@utils/unwrap";
+import type { ApiPagedResponse } from "@interfaces/api-paged-response";
 
 export default class ContactService {
-    async fetchAll(params?: { q?: string }) {
+    async fetchAll(params?: { page?: number; per_page?: number; q?: string }) {
         const { data } = 
-            await api.get<ApiResponse<Contact[]>>("/contacts", { params });
-        return unwrap<Contact[]>(data);
+            await api.get<ApiPagedResponse<Contact[]>>("/contacts", { params });
+
+        if (!data.success) throw new Error(data.message || "Falha ao carregar contatos");
+
+        const items = unwrap<Contact[]>(data);
+        return {
+            items,
+            meta: data.meta,
+            links: data.links,
+        };
     }
 
     async create({ name, email, phone, photo }: Omit<Contact, "id">) {
@@ -22,16 +31,22 @@ export default class ContactService {
         return unwrap<Contact>(data);
     }
 
-    async update(id: number, { name, email, phone, photo }: Partial<Omit<Contact, "id">>) {
+    async update(id: number, payload: { name: string; phone: string; email?: string; photo?: File | string | null }) {
+        if (!(payload.photo instanceof File)) {
+            const body = { name: payload.name, phone: payload.phone, email: payload.email ?? null };
+            return unwrap<Contact>((await api.put<ApiResponse<Contact>>(`/contacts/${id}`, body)).data);
+        }
+
         const fd = new FormData();
-        if (name) fd.append("name", name);
-        if (phone) fd.append("phone", phone);
-        if (email) fd.append("email", email);
-        if (photo) fd.append("photo", photo);
+        fd.append("_method", "PUT");
+        fd.append("name", payload.name);
+        fd.append("phone", payload.phone);
+        if (payload.email) fd.append("email", payload.email);
+        fd.append("photo", payload.photo);
 
-        const { data } = await api.put<ApiResponse<Contact>>(`/contacts/${id}`, fd);
-
-        return unwrap<Contact>(data);
+        return unwrap<Contact>((await api.post<ApiResponse<Contact>>(`/contacts/${id}`, fd, {
+            headers: { "Content-Type": "multipart/form-data" }
+        })).data);
     }
 
     async remove(id: number) {

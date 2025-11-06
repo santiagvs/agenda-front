@@ -7,105 +7,133 @@ import { computed, ref } from "vue";
 const service = new ContactService();
 
 function isValidContact(obj: any): obj is Contact {
-    return Boolean(obj) 
-        && typeof obj.id === "number" 
+    return Boolean(obj)
+        && typeof obj.id === "number"
         && typeof obj.name === "string"
         && typeof obj.phone === "string";
 }
 
 export const useContactsStore = defineStore("contacts", () => {
     const byId = ref<Record<number, Contact>>({});
-    const ids = ref<number[]>([]);
     const loading = ref(false);
     const error = ref<string | null>(null);
     const lastFetched = ref<number>(0);
-    const STALE_MS = 60_000;
 
-    const list = computed<Contact[]>(() =>
-      ids.value.map((id) => byId.value[id]).filter((c): c is Contact => c !== undefined)
-    );
+    const currentPage = ref(1);
+    const perPage = ref(5);
+    const total = ref(0);
+    const lastPage = ref(1);
+    const search = ref("");
+
+    const pageCache = ref<Record<number, number[]>>({});
+
+    const list = computed<Contact[]>(() => {
+        const idsForPage = pageCache.value[currentPage.value] || [];
+        return idsForPage.map(id => byId.value[id]).filter((c): c is Contact => c !== undefined);
+    });
+
+    function setSearch(q: string) {
+        if (q !== search.value) {
+            search.value = q;
+            currentPage.value = 1;
+            pageCache.value = {};
+        }
+    }
 
     const setError = (message?: string | null) => {
-      error.value = message ?? null;
+        error.value = message ?? null;
     };
 
-    function normalize(items: Contact[]) {
-        const map: Record<string, Contact> = {};
-        for (const c of items) map[c.id] = c;
-        byId.value = map;
-        rebuildIdsSorted();
-    }
-
-    function rebuildIdsSorted() {
-        ids.value = Object.values(byId.value)
-        .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"))
-        .map((c) => c.id);
-    }
-
-    async function fetchAll({ force = false, q }: { force?: boolean, q?: string } = {}) {
-        if (!force && list.value.length && Date.now() - lastFetched.value < STALE_MS && !q) {
-            return;
-        }
-
+    async function fetchPage(page = 1) {
         loading.value = true;
         setError(null);
         try {
-            const items = await service.fetchAll(q ? { q } : undefined);
-            normalize(items);
+            const { items, meta } = await service.fetchAll({
+                page,
+                per_page: perPage.value,
+                q: search.value || undefined
+            });
+
+            for (const c of items) if (isValidContact(c)) byId.value[c.id] = c;
+
+            pageCache.value[page] = items.map(c => c.id);
+
+            currentPage.value = meta.current_page;
+            perPage.value = meta.per_page;
+            total.value = meta.total;
+            lastPage.value = meta.last_page;
             lastFetched.value = Date.now();
         } catch (err) {
             const msg =
-              (axios.isAxiosError(err) && (err.response?.data?.message || err.message)) ||
-              (err as Error).message ||
-              "Erro ao carregar contatos";
+                (axios.isAxiosError(err) && (err.response?.data?.message || err.message)) ||
+                (err as Error).message ||
+                "Erro ao carregar contatos";
             setError(msg);
         } finally {
             loading.value = false;
         }
     }
 
-    async function create(payload: Omit<Contact, "id">) {
-        setError(null);
-        const contactCreated = await service.create(payload);
-        if (!isValidContact(contactCreated))
-            throw new Error("Contato inválido recebido da API");
-
-        byId.value[contactCreated.id] = contactCreated;
-        rebuildIdsSorted();
-        return contactCreated;
+    async function goTo(page: number) {
+        if (page < 1 || page > lastPage.value) return;
+        if (pageCache.value[page]) {
+            currentPage.value = page;
+            return;
+        }
+        await fetchPage(page);
     }
 
-    async function update(id: number, payload: Partial<Omit<Contact, "id">>) {
+    async function fetchAll({ force = false }: { force?: boolean } = {}) {
+        if (!force && pageCache.value[currentPage.value]) return;
+        await fetchPage(currentPage.value);
+    }
+
+    async function create(payload: Omit<Contact, "id">) {
         setError(null);
-        const contactUpdated = await service.update(id, payload);
-        if (!isValidContact(contactUpdated))
-            throw new Error("Contato inválido atualizado");
-        
-        byId.value[contactUpdated.id] = contactUpdated;
-        rebuildIdsSorted();
-        return contactUpdated;
+        const created = await service.create(payload);
+        if (!isValidContact(created)) throw new Error("Contato inválido");
+        byId.value[created.id] = created;
+
+        const pageIds = pageCache.value[currentPage.value] || [];
+        if (currentPage.value === 1 && pageIds.length < perPage.value) {
+            pageCache.value[currentPage.value] = [...pageIds, created.id];
+        }
+        return created;
+    }
+
+    async function update(id: number, patch: Partial<Omit<Contact, "id">>) {
+        setError(null);
+        const updated = await service.update(id, patch);
+        if (!isValidContact(updated)) throw new Error("Contato inválido atualizado");
+        byId.value[updated.id] = updated;
+        return updated;
     }
 
     async function remove(id: number) {
         setError(null);
-        try {
-            await service.remove(id);
-            delete byId.value[id];
-            rebuildIdsSorted();
-        } catch (e: any) {
-            setError(e.message || "Erro ao excluir contato");
-            throw e;
-        }
+        await service.remove(id);
+        delete byId.value[id];
+        const pageIds = pageCache.value[currentPage.value] || [];
+        pageCache.value[currentPage.value] = pageIds.filter(x => x !== id);
     }
+
 
     return {
         list,
         loading,
         error,
-        setError,
+        currentPage,
+        perPage,
+        total,
+        lastPage,
+        search,
+        setSearch,
         fetchAll,
+        fetchPage,
+        goTo,
         create,
         update,
-        remove
-    }
+        remove,
+        setError,
+    };
 });

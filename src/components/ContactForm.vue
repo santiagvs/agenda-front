@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { onBeforeUnmount, reactive, ref, watch } from "vue";
+import { computed, onBeforeUnmount, reactive, ref, watch } from "vue";
 import type { Contact } from "@interfaces/contact";
 import { PhUser } from "@phosphor-icons/vue";
+import maskPhone from "@utils/mask-phone";
 
 const props = defineProps<{
     initial?: Partial<Contact>;
@@ -33,16 +34,18 @@ function setPreviewFromFile(file: File) {
 function onFile(e: Event) {
     const input = e.target as HTMLInputElement;
     const file = input.files?.[0];
-    if (file) { 
+    if (file) {
         local.photo = file;
-        setPreviewFromFile(file); 
+        setPreviewFromFile(file);
     }
 }
 
 function onSubmit() {
+    if (!isPhoneValid.value || !isEmailValid.value) return;
+
     emit("submit", {
         name: local.name.trim(),
-        phone: local.phone.trim(),
+        phone: phoneDigits.value,
         email: local.email.trim() || undefined,
         photo: local.photo,
     });
@@ -55,6 +58,28 @@ onBeforeUnmount(() => {
 watch(() => props.initial?.photo_url, (val) => {
     if (val) previewUrl.value = val;
 });
+
+const onlyDigits = (s: string) => s.replace(/\D/g, "");
+
+function onPhoneInput(e: Event) {
+    const input = e.target as HTMLInputElement;
+    const digits = onlyDigits(input.value);
+    local.phone = maskPhone(digits);
+}
+
+watch(
+    () => props.initial?.phone,
+    (val) => {
+        if (val) local.phone = maskPhone(onlyDigits(String(val)));
+    },
+    { immediate: true }
+);
+
+const phoneDigits = computed(() => onlyDigits(local.phone));
+const isPhoneValid = computed(() => phoneDigits.value.length === 11);
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
+const isEmailValid = computed(() => !local.email || EMAIL_RE.test(local.email.trim()));
 </script>
 
 <template>
@@ -70,21 +95,26 @@ watch(() => props.initial?.photo_url, (val) => {
 
         <div class="form-group">
             <label for="name">Nome</label>
-            <input id="name" v-model="local.name" required />
+            <input id="name" v-model="local.name" required autocomplete="off" />
         </div>
 
         <div class="form-group">
             <label for="phone">Telefone</label>
-            <input id="phone" v-model="local.phone" required />
+            <input id="phone" v-model="local.phone" @input="onPhoneInput" inputmode="numeric"
+                placeholder="(99) 99999-9999" :class="{ invalid: !isPhoneValid }" aria-invalid="true" required
+                autocomplete="off" />
+            <small v-if="!isPhoneValid" class="field-error">Informe um telefone válido com 11 dígitos.</small>
         </div>
 
         <div class="form-group">
             <label for="email">E-mail (opcional)</label>
-            <input id="email" type="email" v-model="local.email" />
+            <input id="email" type="email" v-model="local.email" placeholder="voce@exemplo.com"
+                :class="{ invalid: !isEmailValid && !!local.email }" aria-invalid="true" autocomplete="off" />
+            <small v-if="!isEmailValid && !!local.email" class="field-error">E-mail inválido.</small>
         </div>
 
         <slot name="actions">
-            <button type="submit" :disabled="loading">
+            <button type="submit" :disabled="loading || !isPhoneValid || !isEmailValid">
                 {{ loading ? "Salvando..." : submitLabel }}
             </button>
         </slot>
@@ -185,5 +215,16 @@ watch(() => props.initial?.photo_url, (val) => {
     color: #b5b5b5;
     pointer-events: none;
     white-space: nowrap;
+}
+
+.field-error {
+    color: #b00020;
+    margin-top: .25rem;
+    display: block;
+}
+
+input.invalid {
+    outline: none;
+    border: 1px solid #b00020 !important;
 }
 </style>

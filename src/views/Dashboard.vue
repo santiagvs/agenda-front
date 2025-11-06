@@ -8,13 +8,17 @@ import { computed, onMounted, ref } from "vue";
 import { PhX, PhPencil, PhTrash, PhUserCirclePlus, PhSignOut } from "@phosphor-icons/vue";
 import { useAuthStore } from "@stores/auth";
 import { useRouter } from "vue-router";
+import Paginator from "@components/Paginator.vue";
+import maskPhone from "@utils/mask-phone";
 
 const contacts = useContactsStore();
 const auth = useAuthStore();
 const router = useRouter();
 
-const search = ref("");
-const debouncedSet = useDebounceFn((v: string) => (search.value = v), 250);
+const debouncedSet = useDebounceFn((v: string) => {
+  contacts.setSearch(v.trim());
+  contacts.fetchAll({ force: true });
+}, 300);
 
 const showCreate = ref(false);
 const showEdit = ref(false);
@@ -24,20 +28,16 @@ const deletingId = ref<number | null>(null);
 const actionLoading = ref(false);
 const actionError = ref<string | null>(null);
 
-const filtered = computed(() => {
-    const q = search.value.trim().toLowerCase();
-    if (!q) return contacts.list;
-    return contacts.list.filter((c) =>
-        [c.name, c.email, c.phone].filter(Boolean).some((v) => v!.toLowerCase().includes(q))
-    );
-});
-
 onMounted(() => {
-    contacts.fetchAll();
+  contacts.fetchAll({ force: true });
 });
 
 function onRetry() {
-    contacts.fetchAll({ force: true });
+  contacts.fetchAll({ force: true });
+}
+
+function onPageChange(p: number) {
+  contacts.goTo(p);
 }
 
 function openCreate() {
@@ -145,12 +145,12 @@ const editingContact = computed(() =>
                 {{ contacts.error }}
             </div>
 
-            <div v-else-if="!filtered.length" class="empty">
+            <div v-else-if="!contacts.list.length" class="empty">
                 Nenhum contato encontrado.
             </div>
 
             <ul v-else class="list">
-                <li v-for="c in filtered" :key="c.id" class="item">
+                <li v-for="c in contacts.list" :key="c.id" class="item">
                     <div class="item-main">
                         <img v-if="c.photo_url" :src="c.photo_url" class="avatar-img" />
                         <div v-else class="avatar">
@@ -159,7 +159,7 @@ const editingContact = computed(() =>
                         <div class="meta">
                             <strong>{{ c.name }}</strong>
                             <small>{{ c.email || "—" }}</small>
-                            <small>{{ c.phone }}</small>
+                            <small>{{ maskPhone(c.phone) }}</small>
                         </div>
                     </div>
                     <div class="item-actions">
@@ -173,6 +173,13 @@ const editingContact = computed(() =>
                     </div>
                 </li>
             </ul>
+
+            <Paginator
+                :page="contacts.currentPage"
+                :total-pages="contacts.lastPage"
+                :loading="contacts.loading"
+                @change="onPageChange"
+            />
         </main>
     </div>
 
