@@ -1,0 +1,62 @@
+.item {
+    position: relative;
+    overflow: hidden;
+    background: #edeeee;
+    border-radius: 12px;
+    display: block;
+    padding: .75rem 0 .75rem .75rem;
+    --actions-w: 78px;
+    --drag: 0px;
+    --hover: 0px;
+}
+
+.item-main {
+    display: grid;
+    grid-template-columns: 40px 1fr;
+    gap: 0.75rem;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+    transition: transform .22s ease;
+    transform: translateX(calc(max(var(--drag), var(--hover)) * -1));
+    padding-right: 0.75rem;
+}
+
+.item-actions {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    height: 100%;
+    width: var(--actions-w);
+    display: flex;
+    justify-content: center;
+    padding: 0;
+    gap: 0;
+    box-shadow: -4px 0 8px -4px rgba(0, 0, 0, .08) inset;
+    transition: transform .22s ease;
+    transform: translateX(calc(var(--actions-w) - max(var(--drag), var(--hover))));
+}
+
+.item-actions :deep(.icon-btn) {
+    box-sizing: border-box;
+    width: 100%;
+    flex: 1 1 auto;
+    min-width: 3.2rem;
+    padding: .6rem .75rem;
+    border-radius: 0;
+}
+
+.item-actions :deep(.icon-btn.danger) {
+    background: #ffe4e4;
+}
+
+.item-actions :deep(.icon-btn.danger:hover) {
+    background: #ffd2d2;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .item:hover {
+        --hover: var(--actions-w);
+    }
+}

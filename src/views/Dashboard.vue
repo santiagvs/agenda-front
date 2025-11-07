@@ -5,20 +5,20 @@ import type { Contact } from "@interfaces/contact";
 import { useContactsStore } from "@stores/contact";
 import { useDebounceFn } from "@vueuse/core"
 import { computed, onMounted, ref } from "vue";
-import { PhX, PhPencil, PhTrash, PhUserCirclePlus, PhSignOut } from "@phosphor-icons/vue";
+import { PhX, PhPencil, PhTrash, PhUserCirclePlus, PhSignOut, PhArrowsClockwise } from "@phosphor-icons/vue";
 import { useAuthStore } from "@stores/auth";
 import { useRouter } from "vue-router";
 import Paginator from "@components/Paginator.vue";
 import maskPhone from "@utils/mask-phone";
 import Brand from "@components/Brand.vue";
+import SwipeReveal from "@components/SwipeReveal.vue";
 
 const contacts = useContactsStore();
 const auth = useAuthStore();
 const router = useRouter();
 
 const debouncedSet = useDebounceFn((v: string) => {
-  contacts.setSearch(v.trim());
-  contacts.fetchAll({ force: true });
+  contacts.setSearch(v);
 }, 300);
 
 const showCreate = ref(false);
@@ -28,6 +28,16 @@ const editingId = ref<number | null>(null);
 const deletingId = ref<number | null>(null);
 const actionLoading = ref(false);
 const actionError = ref<string | null>(null);
+
+const isMobile = ref(false);
+onMounted(() => {
+  const ua = (navigator.userAgent || navigator.vendor || (window as any).opera || "").toLowerCase();
+  isMobile.value = /(android|iphone|ipad|ipod|blackberry|iemobile|opera mini)/i.test(ua);
+});
+
+const searchPlaceholder = computed(() =>
+  isMobile.value ? "Buscar..." : "Buscar por nome, e-mail ou telefone"
+);
 
 onMounted(() => {
   contacts.fetchAll({ force: true });
@@ -130,10 +140,12 @@ const editingContact = computed(() =>
 
         <main class="contacts">
             <div class="toolbar">
-                <input class="search" type="search" placeholder="Buscar por nome, e-mail ou telefone"
+                <input class="search" type="search" :placeholder="searchPlaceholder"
                     @input="debouncedSet(($event.target as HTMLInputElement).value)" />
-                <button @click="onRetry" :disabled="contacts.loading">Recarregar</button>
-                <button @click="openCreate" style="background-color: #00705A; padding-block: 0.475rem;">
+                <button @click="onRetry" :disabled="contacts.loading" title="Atualizar" aria-label="Atualizar lista">
+                    <PhArrowsClockwise :size="20" />
+                </button>
+                <button class="add-button" @click="openCreate" title="Criar contato" aria-label="Criar contato">
                     <PhUserCirclePlus :size="20" />
                 </button>
             </div>
@@ -151,28 +163,31 @@ const editingContact = computed(() =>
             </div>
 
             <ul v-else class="list">
-                <li v-for="c in contacts.list" :key="c.id" class="item">
-                    <div class="item-main">
+                <SwipeReveal
+                    v-for="c in contacts.list"
+                    :key="c.id"
+                    :action-width="96"
+                    class="item"
+                >
+                    <template #default>
                         <img v-if="c.photo_url" :src="c.photo_url" class="avatar-img" />
-                        <div v-else class="avatar">
-                            {{ c.name[0] }}
-                        </div>
+                        <div v-else class="avatar">{{ c.name[0] }}</div>
                         <div class="meta">
-                            <strong>{{ c.name }}</strong>
-                            <small>{{ c.email || "—" }}</small>
-                            <small>{{ maskPhone(c.phone) }}</small>
+                        <strong>{{ c.name }}</strong>
+                        <small>{{ c.email || "—" }}</small>
+                        <small>{{ maskPhone(c.phone) }}</small>
                         </div>
-                    </div>
-                    <div class="item-actions">
+                    </template>
+
+                    <template #actions>
                         <button class="icon-btn" type="button" @click.stop="openEdit(c.id)" aria-label="Editar contato">
-                            <PhPencil :size="20" weight="duotone" />
+                            <PhPencil :size="20" />
                         </button>
-                        <button class="icon-btn danger" type="button" @click.stop="openDelete(c.id)"
-                            aria-label="Excluir contato">
-                            <PhTrash :size="20" weight="duotone" />
+                        <button class="icon-btn danger" type="button" @click.stop="openDelete(c.id)" aria-label="Excluir contato">
+                            <PhTrash :size="20" />
                         </button>
-                    </div>
-                </li>
+                    </template>
+                </SwipeReveal>
             </ul>
 
             <Paginator
@@ -235,6 +250,7 @@ const editingContact = computed(() =>
 </template>
 
 <style src="@styles/header.css" scoped></style>
+<style src="@styles/icon-btn.css" scoped></style>
 
 <style scoped>
 .dashboard {
@@ -269,8 +285,14 @@ const editingContact = computed(() =>
     background: #007bff;
     border: none;
     color: #fff;
-    border-radius: 6px;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+}
+
+.toolbar .add-button {
+    background-color: #00705A;
+    padding-block: 0.6rem;
 }
 
 .toolbar button:disabled {
@@ -296,32 +318,6 @@ const editingContact = computed(() =>
     margin: 0;
 }
 
-.item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-    background: #ffffff;
-    color: #222;
-    border-radius: 10px;
-    padding: 0.75rem 1rem;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
-    transition: background .15s;
-}
-
-.item:hover {
-    background: #f4f8ff;
-}
-
-.item-main {
-    display: grid;
-    grid-template-columns: 40px 1fr;
-    gap: 0.75rem;
-    align-items: center;
-    flex: 1;
-    min-width: 0;
-}
-
 .avatar {
     width: 40px;
     height: 40px;
@@ -344,42 +340,6 @@ const editingContact = computed(() =>
     display: grid;
     gap: 2px;
     min-width: 0;
-}
-
-.item-actions {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.icon-btn {
-    background: #eef2f7;
-    border: none;
-    padding: .45rem .55rem;
-    border-radius: 6px;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: #2f3a48;
-    transition: background .15s, transform .15s;
-}
-
-.icon-btn:hover {
-    background: #dbe4ec;
-}
-
-.icon-btn:active {
-    transform: scale(.95);
-}
-
-.icon-btn.danger {
-    background: #ffe9e9;
-    color: #b80000;
-}
-
-.icon-btn.danger:hover {
-    background: #ffd1d1;
 }
 
 .avatar {

@@ -32,12 +32,13 @@ export const useContactsStore = defineStore("contacts", () => {
         return idsForPage.map(id => byId.value[id]).filter((c): c is Contact => c !== undefined);
     });
 
-    function setSearch(q: string) {
-        if (q !== search.value) {
-            search.value = q;
-            currentPage.value = 1;
-            pageCache.value = {};
-        }
+    async function setSearch(q: string) {
+        const term = q.trim();
+        if (term === search.value) return;
+        search.value = term;
+        currentPage.value = 1;
+        pageCache.value = {};
+        await fetchPage(1);
     }
 
     const setError = (message?: string | null) => {

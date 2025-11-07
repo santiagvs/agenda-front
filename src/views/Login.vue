@@ -22,10 +22,9 @@ const handleLogin = async () => {
 <template>
     <main class="page-center">
         <div class="login-container">
-            <div class="brand" style="margin: 0 auto; width: 50%">
+            <div class="brand" style="margin: 0 auto; width: 50%; padding-bottom: 1rem;">
                 <Brand font-size="2rem" :size="40" accent="#0a66ff" color="#111" />
             </div>
-            <h2 style="color: #444;">Login</h2>
             <form @submit.prevent="handleLogin" class="login-form">
                 <div class="form-group">
                     <label for="email">E-mail:</label>

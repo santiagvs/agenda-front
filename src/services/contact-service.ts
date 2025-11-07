@@ -31,7 +31,7 @@ export default class ContactService {
         return unwrap<Contact>(data);
     }
 
-    async update(id: number, payload: { name: string; phone: string; email?: string; photo?: File | string | null }) {
+    async update(id: number, payload: Partial<Contact>) {
         if (!(payload.photo instanceof File)) {
             const body = { name: payload.name, phone: payload.phone, email: payload.email ?? null };
             return unwrap<Contact>((await api.put<ApiResponse<Contact>>(`/contacts/${id}`, body)).data);
@@ -39,8 +39,8 @@ export default class ContactService {
 
         const fd = new FormData();
         fd.append("_method", "PUT");
-        fd.append("name", payload.name);
-        fd.append("phone", payload.phone);
+        if (payload.name )fd.append("name", payload.name);
+        if (payload.phone) fd.append("phone", payload.phone);
         if (payload.email) fd.append("email", payload.email);
         fd.append("photo", payload.photo);
 

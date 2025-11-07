@@ -1,0 +1,29 @@
+.icon-btn {
+    background-color: #edeeee;
+    border: none;
+    border-radius: 0px;
+    padding: .45rem .55rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #2f3a48;
+    transition: background .15s, transform .15s;
+}
+
+.icon-btn:hover {
+    background: #dbe4ec;
+}
+
+.icon-btn:active {
+    transform: scale(.95);
+}
+
+.icon-btn.danger {
+    background: #ffe9e9;
+    color: #b80000;
+}
+
+.icon-btn.danger:hover {
+    background: #ffd1d1;
+}

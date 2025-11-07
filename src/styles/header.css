@@ -34,6 +34,8 @@
 
 .logout-btn {
     transition: 300ms ease-in-out;
+    display: flex;
+    align-items: center;
 }
 
 .app-header .logout-btn:hover {

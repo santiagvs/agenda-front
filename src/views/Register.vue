@@ -42,10 +42,9 @@ async function handleRegister() {
 <template>
     <main class="page-center">
         <div class="register-container">
-            <div class="brand" style="margin: 0 auto; width: 50%">
+            <div class="brand" style="margin: 0 auto; width: 50%; padding-bottom: 1rem;">
                 <Brand font-size="2rem" :size="40" accent="#0a66ff" color="#111" />
             </div>
-            <h2 style="color: #444;">Registro</h2>
             <form class="register-form" @submit.prevent="handleRegister" novalidate>
                 <AppInput id="name" label="Nome:" v-model="name" required :disabled="authStore.loading" />
                 <AppInput id="email" label="E-mail:" type="email" v-model="email" required
