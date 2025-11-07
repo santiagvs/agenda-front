@@ -2,12 +2,16 @@
 import { useAuthStore } from "@stores/auth";
 import { ref } from "vue";
 import { useRouter } from "vue-router";
+import Brand from "@components/Brand.vue";
+import { PhEye, PhEyeSlash } from "@phosphor-icons/vue";
 
 const authStore = useAuthStore();
 const router = useRouter();
 
 const email = ref("");
 const password = ref("");
+
+const isPasswordVisible = ref(false);
 
 const handleLogin = async () => {
     const result = await authStore.login(email.value, password.value);
@@ -16,8 +20,11 @@ const handleLogin = async () => {
 </script>
 
 <template>
-    <div class="page-center">
+    <main class="page-center">
         <div class="login-container">
+            <div class="brand" style="margin: 0 auto; width: 50%">
+                <Brand font-size="2rem" :size="40" accent="#0a66ff" color="#111" />
+            </div>
             <h2 style="color: #444;">Login</h2>
             <form @submit.prevent="handleLogin" class="login-form">
                 <div class="form-group">
@@ -27,8 +34,25 @@ const handleLogin = async () => {
                 </div>
                 <div class="form-group">
                     <label for="password">Senha:</label>
-                    <input id="password" type="password" v-model="password" required :disabled="authStore.loading"
-                        @input="authStore.clearError" />
+                    <div class="password">
+                        <input
+                            id="password"
+                            :type="isPasswordVisible ? 'text' : 'password'"
+                            v-model="password"
+                            required
+                            :disabled="authStore.loading"
+                            :class="{ invalid: password.length > 0 }"
+                            @input="authStore.clearError"
+                        />
+                        <button
+                            type="button"
+                            class="toggle-btn"
+                            @click="isPasswordVisible = !isPasswordVisible"
+                        >
+                            <PhEye :size="18" color="#111111" v-if="!isPasswordVisible" />
+                            <PhEyeSlash :size="18" color="#111111" v-else />
+                        </button>
+                    </div>
                 </div>
                 <button type="submit" :disabled="authStore.loading">
                     {{ authStore.loading ? "Entrando..." : "Entrar" }}
@@ -37,7 +61,7 @@ const handleLogin = async () => {
                 <span>Não tem conta? <router-link to="/register">Registrar</router-link></span>
             </form>
         </div>
-    </div>
+    </main>
 </template>
 
 <style scoped>
@@ -66,17 +90,40 @@ const handleLogin = async () => {
 
 button {
     padding: 0.75rem;
-    background-color: #007bff;
+    background-color: #282C35;
     font-size: 18px;
     color: white;
     border: none;
     border-radius: 4px;
     cursor: pointer;
+    transition: 300ms ease-in-out;
+}
+
+button:hover {
+    background-color: #282c3567;
 }
 
 button:disabled {
     background-color: #ccc;
     cursor: not-allowed;
+}
+
+.password {
+    position: relative;
+    width: 100%;
+}
+
+.toggle-btn {
+    position: absolute;
+    bottom: -4.5px;
+    right: 0.4rem;
+    background-color: transparent;
+    outline: none;
+    transition: none;
+}
+
+.toggle-btn:hover {
+    background-color: transparent;
 }
 
 .error {

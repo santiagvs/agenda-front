@@ -10,6 +10,7 @@ import { useAuthStore } from "@stores/auth";
 import { useRouter } from "vue-router";
 import Paginator from "@components/Paginator.vue";
 import maskPhone from "@utils/mask-phone";
+import Brand from "@components/Brand.vue";
 
 const contacts = useContactsStore();
 const auth = useAuthStore();
@@ -118,7 +119,7 @@ const editingContact = computed(() =>
 <template>
     <div class="dashboard">
         <header class="app-header">
-            <div class="brand">Agenda</div>
+            <Brand font-size="3.5rem" :size="36" accent="#0a66ff" color="#111" />
             <div class="right">
                 <span>Olá, <b>{{ auth.user?.name }}</b></span>
                 <button class="logout-btn" type="button" @click="handleLogout" title="Sair">

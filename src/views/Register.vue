@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { useAuthStore } from "@stores/auth";
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
+import AppInput from "@components/AppInput.vue";
+import isEmailValid from "@utils/is-email-valid";
+import { PhEye, PhEyeSlash } from "@phosphor-icons/vue";
+import Brand from "@components/Brand.vue";
 
 const authStore = useAuthStore();
 const router = useRouter();
@@ -12,7 +16,21 @@ const password = ref("");
 const passwordConfirmation = ref("");
 const successMessage = ref("");
 
-const handleRegister = async () => {
+const isPasswordVisible = ref(false);
+const isPasswordConfirmationVisible = ref(false);
+
+const emailOk = computed(() => isEmailValid(email.value));
+const nameOk = computed(() => !!name.value.trim());
+
+const isPasswordValid = computed(() =>
+    /^(?=.*[A-Za-z])(?=.*\d).{8,}$/.test(password.value)
+);
+const passwordsMatch = computed(() => password.value === passwordConfirmation.value);
+const pwdOk = computed(() => isPasswordValid.value && passwordsMatch.value);
+const canSubmit = computed(() => nameOk.value && emailOk.value && pwdOk.value && !authStore.loading);
+
+async function handleRegister() {
+    if (!canSubmit.value) return;
     const result = await authStore.register(name.value, email.value, password.value, passwordConfirmation.value);
     if (result.success) {
         successMessage.value = "Registro realizado com sucesso! Redirecionando para login...";
@@ -22,38 +40,79 @@ const handleRegister = async () => {
 </script>
 
 <template>
-    <div class="page-center">
+    <main class="page-center">
         <div class="register-container">
+            <div class="brand" style="margin: 0 auto; width: 50%">
+                <Brand font-size="2rem" :size="40" accent="#0a66ff" color="#111" />
+            </div>
             <h2 style="color: #444;">Registro</h2>
             <form class="register-form" @submit.prevent="handleRegister" novalidate>
-                <div class="form-group">
-                    <label for="name">Nome:</label>
-                    <input id="name" type="text" v-model="name" required :disabled="authStore.loading"
-                        @input="authStore.clearError" />
-                </div>
-                <div class="form-group">
-                    <label for="email">E-mail:</label>
-                    <input id="email" type="email" v-model="email" required :disabled="authStore.loading"
-                        @input="authStore.clearError" />
-                </div>
+                <AppInput id="name" label="Nome:" v-model="name" required :disabled="authStore.loading" />
+                <AppInput id="email" label="E-mail:" type="email" v-model="email" required
+                    :disabled="authStore.loading" />
+
                 <div class="form-group">
                     <label for="password">Senha:</label>
-                    <input id="password" type="password" v-model="password" required :disabled="authStore.loading"
-                        @input="authStore.clearError" />
+                    <div class="password">
+                        <input
+                            id="password"
+                            :type="isPasswordVisible ? 'text' : 'password'"
+                            v-model="password"
+                            required
+                            :disabled="authStore.loading"
+                            :class="{ invalid: password.length > 0 && !isPasswordValid }"
+                            @input="authStore.clearError"
+                        />
+                        <button
+                            type="button"
+                            class="toggle-btn"
+                            @click="isPasswordVisible = !isPasswordVisible"
+                        >
+                            <PhEye :size="18" color="#111111" v-if="!isPasswordVisible" />
+                            <PhEyeSlash :size="18" color="#111111" v-else />
+                        </button>
+                    </div>
+                    <small v-if="password.length > 0 && !isPasswordValid" class="field-error">
+                        A senha deve ter ao menos 8 caracteres, incluindo letras e números.
+                    </small>
                 </div>
-                <div class="form-group">
+
+                <div class="form-group password">
                     <label for="passwordConfirmation">Confirmar senha:</label>
-                    <input id="passwordConfirmation" type="password" v-model="passwordConfirmation" required
-                        :disabled="authStore.loading" @input="authStore.clearError" />
+                    <div class="password">
+                        <input
+                            id="passwordConfirmation"
+                            :type="isPasswordConfirmationVisible ? 'text' : 'password'"
+                            v-model="passwordConfirmation"
+                            required
+                            :disabled="authStore.loading"
+                            :class="{ invalid: passwordConfirmation.length > 0 && !passwordsMatch }"
+                            @input="authStore.clearError"
+                        />
+                        <button
+                            type="button"
+                            class="toggle-btn"
+                            @click="isPasswordConfirmationVisible = !isPasswordConfirmationVisible"
+                        >
+                            <PhEye :size="18" color="#111111" v-if="!isPasswordConfirmationVisible" />
+                            <PhEyeSlash :size="18" color="#111111" v-else />
+                        </button>
+                    </div>
+                    <small v-if="passwordConfirmation.length > 0 && !passwordsMatch" class="field-error">
+                        A confirmação deve ser igual à senha.
+                    </small>
                 </div>
-                <button type="submit" :disabled="authStore.loading">
+
+                <button type="submit" :disabled="!canSubmit">
                     {{ authStore.loading ? "Registrando..." : "Registrar" }}
                 </button>
+
                 <div class="error" v-if="authStore.error">{{ authStore.error }}</div>
                 <div class="success" v-if="successMessage">{{ successMessage }}</div>
+                <span>Já tem conta? <router-link to="/login">Fazer login</router-link></span>
             </form>
         </div>
-    </div>
+    </main>
 </template>
 
 <style scoped>
@@ -81,19 +140,46 @@ const handleRegister = async () => {
     align-items: stretch;
 }
 
+.password {
+    position: relative;
+    width: 100%;
+}
+
+.toggle-btn {
+    position: absolute;
+    bottom: -4.5px;
+    right: 0.4rem;
+    background-color: transparent;
+    outline: none;
+    transition: none;
+}
+
+.toggle-btn:hover {
+    background-color: transparent;
+}
+
 button {
     padding: 0.75rem;
-    background-color: #007bff;
+    background-color: #282C35;
     font-size: 18px;
     color: white;
     border: none;
     border-radius: 4px;
     cursor: pointer;
+    transition: 300ms ease-in-out;
+}
+
+button:hover {
+    background-color: #282c3567;
 }
 
 button:disabled {
     background-color: #ccc;
     cursor: not-allowed;
+}
+
+.field-error {
+    font-size: 10   px;
 }
 
 .error {
