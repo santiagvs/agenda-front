@@ -5,20 +5,16 @@ import type { Contact } from "@interfaces/contact";
 import { useContactsStore } from "@stores/contact";
 import { useDebounceFn } from "@vueuse/core"
 import { computed, onMounted, ref } from "vue";
-import { PhX, PhPencil, PhTrash, PhUserCirclePlus, PhSignOut, PhArrowsClockwise } from "@phosphor-icons/vue";
-import { useAuthStore } from "@stores/auth";
-import { useRouter } from "vue-router";
+import { PhX, PhPencil, PhTrash, PhUserCirclePlus, PhArrowsClockwise } from "@phosphor-icons/vue";
 import Paginator from "@components/Paginator.vue";
 import maskPhone from "@utils/mask-phone";
-import Brand from "@components/Brand.vue";
 import SwipeReveal from "@components/SwipeReveal.vue";
+import AppHeader from "@components/AppHeader.vue";
 
 const contacts = useContactsStore();
-const auth = useAuthStore();
-const router = useRouter();
 
 const debouncedSet = useDebounceFn((v: string) => {
-  contacts.setSearch(v);
+    contacts.setSearch(v);
 }, 300);
 
 const showCreate = ref(false);
@@ -31,24 +27,27 @@ const actionError = ref<string | null>(null);
 
 const isMobile = ref(false);
 onMounted(() => {
-  const ua = (navigator.userAgent || navigator.vendor || (window as any).opera || "").toLowerCase();
-  isMobile.value = /(android|iphone|ipad|ipod|blackberry|iemobile|opera mini)/i.test(ua);
+    const ua = (navigator.userAgent || navigator.vendor || (window as any).opera || "").toLowerCase();
+    const mobileDimensions = window.innerWidth <= 480;
+    isMobile.value =
+        /(android|iphone|ipad|ipod|blackberry|iemobile|opera mini)/i.test(ua)
+        || mobileDimensions;
 });
 
 const searchPlaceholder = computed(() =>
-  isMobile.value ? "Buscar..." : "Buscar por nome, e-mail ou telefone"
+    isMobile.value ? "Buscar..." : "Buscar por nome, e-mail ou telefone"
 );
 
 onMounted(() => {
-  contacts.fetchAll({ force: true });
+    contacts.fetchAll({ force: true });
 });
 
 function onRetry() {
-  contacts.fetchAll({ force: true });
+    contacts.fetchAll({ force: true });
 }
 
 function onPageChange(p: number) {
-  contacts.goTo(p);
+    contacts.goTo(p);
 }
 
 function openCreate() {
@@ -115,10 +114,7 @@ async function handleDelete() {
     }
 }
 
-function handleLogout() {
-    auth.logout();
-    router.push("/login");
-}
+
 
 const editingContact = computed(() =>
     editingId.value ? contacts.list.find(c => c.id === editingId.value) : undefined
@@ -128,15 +124,7 @@ const editingContact = computed(() =>
 
 <template>
     <div class="dashboard">
-        <header class="app-header">
-            <Brand font-size="3.5rem" :size="36" accent="#0a66ff" color="#111" />
-            <div class="right">
-                <span>Olá, <b>{{ auth.user?.name }}</b></span>
-                <button class="logout-btn" type="button" @click="handleLogout" title="Sair">
-                    <PhSignOut :size="20" />
-                </button>
-            </div>
-        </header>
+        <AppHeader />
 
         <main class="contacts">
             <div class="toolbar">
@@ -249,7 +237,6 @@ const editingContact = computed(() =>
     </Modal>
 </template>
 
-<style src="@styles/header.css" scoped></style>
 <style src="@styles/icon-btn.css" scoped></style>
 
 <style scoped>
@@ -366,6 +353,10 @@ const editingContact = computed(() =>
     padding: .5rem .75rem;
     border-radius: 6px;
     font-size: .875rem;
+}
+
+.skeleton {
+    color: #FFF;
 }
 
 .error {
