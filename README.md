@@ -2,6 +2,8 @@
 
 Aplicação web (Vue 3 + Vite + TypeScript) para gerenciar contatos com autenticação, paginação e busca server-side.
 
+__Link do vídeo da apresentação do teste: https://youtu.be/BsesJC2BuJg__
+
 Stack:
 - Vue 3, Vite, TypeScript
 - Pinia (estado), Vue Router
